@@ -4,12 +4,17 @@ var ground, invisibleGround, groundImage;
 var cloudsGroup, cloudImage;
 var obstaclesGroup, obstacle1, obstacle2, obstacle3, obstacle4, obstacle5, obstacle6;
 
+var jumpSound, dieSound, chkPtSound;
+
 var score = 0;
 var PLAY = 1;
 var END = 0;
 var gameState = PLAY;
 
 var gameOver, restart;
+
+localStorage["HighestScore"] = 0;
+
 function preload(){
   trex_running = loadAnimation("trex1.png","trex3.png","trex4.png");
   trex_collided = loadImage("trex_collided.png");
@@ -27,6 +32,10 @@ function preload(){
   
   gameOverImg = loadImage("gameOver.png");
   restartImg = loadImage("restart.png");
+  
+  jumpSound = loadSound("jump.mp3");
+  dieSound = loadSound("die.mp3");
+  chkPtSound = loadSound("checkPoint.mp3");
 }
 
 function setup() {
@@ -34,8 +43,9 @@ function setup() {
   
   trex = createSprite(50,180,20,50);
   trex.addAnimation("running", trex_running);
+  trex.addAnimation("collided",trex_collided);
   trex.scale = 0.5;
-  
+    
   ground = createSprite(200,180,400,20);
   ground.addImage("ground",groundImage);
   ground.x = ground.width /2;
@@ -47,8 +57,6 @@ function setup() {
   cloudsGroup = new Group();
   obstaclesGroup = new Group();
   
-  trex.addImage("collided",trex_collided);
-  
   gameOver = createSprite(300,100);
   gameOver.addImage("over", gameOverImg);
   gameOver.scale = 0.5;
@@ -58,7 +66,6 @@ function setup() {
   restart.addImage("restart", restartImg);
   restart.scale = 0.5;
   restart.visible = false;
-  
 }
 
 function draw() {
@@ -66,19 +73,26 @@ function draw() {
   
   if(gameState === PLAY) {
     score = score + Math.round(getFrameRate()/60);
+    ground.velocityX = -(6 + 3*score/100);
     
-    if(keyDown("space")) {
-      trex.velocityY = -10;
+    if(keyDown("space")  && trex.y >= 159) {
+      jumpSound.play();
+      trex.velocityY = -12;
     }
     trex.velocityY = trex.velocityY + 0.8
     
     if (ground.x < 0){
       ground.x = ground.width/2;
     }
+    
+    if (score > 0 && score%100 === 0){
+      chkPtSound.play();
+    }
     spawnClouds();
     spawnObstacles();
     
     if(obstaclesGroup.isTouching(trex)) {
+      dieSound.play();
       gameState = END;
     }
   } else if(gameState === END) {
@@ -93,21 +107,21 @@ function draw() {
       cloudsGroup.setVelocityXEach(0);
 
       //change the trex animation
-      trex.changeImage("collided",trex_collided);
+      trex.changeAnimation("collided",trex_collided);
     
       //set lifetime of the game objects so that they are never destroyed
       obstaclesGroup.setLifetimeEach(-1);
       cloudsGroup.setLifetimeEach(-1);
+    
+      if(mousePressedOver(restart)) {
+        reset();
+      }
         }        
-  
+  text("HI: " + localStorage["HighestScore"], 400,50);
   text("Score: "+ score, 500,50);
     
   trex.collide(invisibleGround);
-  
-  if(mousePressedOver(restart)) {
-    reset();
-  }
-  
+    
   drawSprites();
 }
 
@@ -122,6 +136,9 @@ function reset(){
   
   trex.changeAnimation("running", trex_running);
   
+  if(localStorage["HighestScore"] < score){
+    localStorage["HighestScore"] = score;
+  }
   score = 0;
   
 }
